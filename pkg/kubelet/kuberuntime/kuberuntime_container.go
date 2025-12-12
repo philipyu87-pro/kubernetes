@@ -1048,6 +1048,11 @@ func (m *kubeGenericRuntimeManager) computeInitContainerActions(ctx context.Cont
 	// have been executed at some point in the past.  However, they could have been removed
 	// from the container runtime now, and if we proceed, it would appear as if they
 	// never ran and will re-execute improperly except for the restartable init containers.
+	//
+	// Note: We only check for ContainerStateRunning, not ContainerStateCreated. A container
+	// in the Created state has been created but not yet started, which means init containers
+	// may not have completed yet. Only when a regular container reaches Running state can we
+	// be confident that all init containers have successfully completed.
 	podHasInitialized := false
 	for _, container := range pod.Spec.Containers {
 		status := podStatus.FindContainerStatusByName(container.Name)
@@ -1055,8 +1060,7 @@ func (m *kubeGenericRuntimeManager) computeInitContainerActions(ctx context.Cont
 			continue
 		}
 		switch status.State {
-		case kubecontainer.ContainerStateCreated,
-			kubecontainer.ContainerStateRunning:
+		case kubecontainer.ContainerStateRunning:
 			podHasInitialized = true
 		case kubecontainer.ContainerStateExited:
 			// This is a workaround for the issue that the kubelet cannot
@@ -1067,7 +1071,7 @@ func (m *kubeGenericRuntimeManager) computeInitContainerActions(ctx context.Cont
 			// In this case, the kubelet should not mistakenly think that
 			// the newly created podSandbox has been initialized.
 		default:
-			// Ignore other states
+			// Ignore other states (including ContainerStateCreated)
 		}
 		if podHasInitialized {
 			break
