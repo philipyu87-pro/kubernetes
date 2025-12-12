@@ -1010,7 +1010,12 @@ func (m *kubeGenericRuntimeManager) purgeInitContainers(ctx context.Context, pod
 }
 
 // hasAnyRegularContainerCreated returns true if any regular container has been
-// created, which indicates all init containers have been initialized.
+// created and started, which indicates all init containers have been initialized.
+// Note: We only check for Running or Exited states, not Created. A container
+// in the Created state has been created but not yet started, which means init
+// containers may not have completed yet. Only when a regular container reaches
+// Running or Exited state can we be confident that all init containers have
+// successfully completed.
 func hasAnyRegularContainerCreated(pod *v1.Pod, podStatus *kubecontainer.PodStatus) bool {
 	for _, container := range pod.Spec.Containers {
 		status := podStatus.FindContainerStatusByName(container.Name)
@@ -1018,12 +1023,11 @@ func hasAnyRegularContainerCreated(pod *v1.Pod, podStatus *kubecontainer.PodStat
 			continue
 		}
 		switch status.State {
-		case kubecontainer.ContainerStateCreated,
-			kubecontainer.ContainerStateRunning,
+		case kubecontainer.ContainerStateRunning,
 			kubecontainer.ContainerStateExited:
 			return true
 		default:
-			// Ignore other states
+			// Ignore other states (including ContainerStateCreated)
 		}
 	}
 	return false
