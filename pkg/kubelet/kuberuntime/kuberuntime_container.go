@@ -1010,12 +1010,13 @@ func (m *kubeGenericRuntimeManager) purgeInitContainers(ctx context.Context, pod
 }
 
 // hasAnyRegularContainerCreated returns true if any regular container has been
-// created and started, which indicates all init containers have been initialized.
-// Note: We only check for Running or Exited states, not Created. A container
-// in the Created state has been created but not yet started, which means init
-// containers may not have completed yet. Only when a regular container reaches
-// Running or Exited state can we be confident that all init containers have
-// successfully completed.
+// started (is running or has exited), which indicates all init containers have
+// been initialized.
+// Note: We check for Running or Exited states, not Created. A container in the
+// Created state has been created but not yet started, which means init containers
+// may not have completed yet. Only when a regular container reaches Running or
+// Exited state can we be confident that all init containers have successfully
+// completed before that container was started.
 func hasAnyRegularContainerCreated(pod *v1.Pod, podStatus *kubecontainer.PodStatus) bool {
 	for _, container := range pod.Spec.Containers {
 		status := podStatus.FindContainerStatusByName(container.Name)
@@ -1053,10 +1054,13 @@ func (m *kubeGenericRuntimeManager) computeInitContainerActions(ctx context.Cont
 	// from the container runtime now, and if we proceed, it would appear as if they
 	// never ran and will re-execute improperly except for the restartable init containers.
 	//
-	// Note: We only check for ContainerStateRunning, not ContainerStateCreated. A container
-	// in the Created state has been created but not yet started, which means init containers
-	// may not have completed yet. Only when a regular container reaches Running state can we
-	// be confident that all init containers have successfully completed.
+	// Note: We only check for ContainerStateRunning, not ContainerStateCreated or
+	// ContainerStateExited. A container in the Created state has been created but not yet
+	// started, which means init containers may not have completed yet. We also don't check
+	// Exited state here because after a node reboot, all containers will be in Exited state
+	// but we're checking status of the current pod sandbox, which hasn't been initialized yet.
+	// Only when a regular container reaches Running state can we be confident that all init
+	// containers have successfully completed for the current pod sandbox.
 	podHasInitialized := false
 	for _, container := range pod.Spec.Containers {
 		status := podStatus.FindContainerStatusByName(container.Name)
