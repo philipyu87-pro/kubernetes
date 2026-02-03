@@ -42,6 +42,8 @@ If you want to build Kubernetes right away there are two options:
 
 ##### You have a working [Go environment].
 
+**Note**: Building Kubernetes requires Go 1.25 or later. The specific version required is listed in the `.go-version` file.
+
 ```
 git clone https://github.com/kubernetes/kubernetes
 cd kubernetes
