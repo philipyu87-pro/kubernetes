@@ -16,6 +16,17 @@ Building Kubernetes is easy if you take advantage of the containerized build env
 
 You must install and configure Google Cloud SDK if you want to upload your release to Google Cloud Storage and may safely omit this otherwise.
 
+3. **Go** (for local builds without Docker)
+
+If you want to build Kubernetes locally without using Docker containers, you need to have Go installed. The required Go version is specified in the `.go-version` file in the repository root. As of the current version, Kubernetes requires **Go 1.25.5** or later.
+
+You can verify the required version by checking:
+```bash
+cat .go-version
+```
+
+Download and install Go from the [official Go website](https://go.dev/doc/install).
+
 ## Overview
 
 You can build Kubernetes in two environments:
